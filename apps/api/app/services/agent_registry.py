@@ -6,14 +6,20 @@ Agents are auto-discovered from the `agents/` package on startup.
 
 import importlib
 import inspect
+import json
 import pkgutil
+
 import structlog
 
 from typing import Any
 
 from agents.base import BaseAgent
+from apps.api.app.core.cache import cache_get, cache_set, cache_delete
 
 logger = structlog.get_logger(__name__)
+
+CACHE_PREFIX = "agent:"
+CACHE_TTL = 300  # 5 minutes
 
 
 class AgentRegistry:
@@ -33,6 +39,20 @@ class AgentRegistry:
     def get(self, slug: str) -> BaseAgent | None:
         """Get an agent by slug."""
         return self._agents.get(slug)
+
+    async def get_cached_docs(self, slug: str) -> dict[str, Any] | None:
+        """Get agent docs from Redis cache, falling back to registry."""
+        cache_key = f"{CACHE_PREFIX}{slug}:docs"
+        cached = await cache_get(cache_key)
+        if cached:
+            return json.loads(cached)
+
+        agent = self.get(slug)
+        if agent:
+            docs = agent.get_documentation()
+            await cache_set(cache_key, json.dumps(docs), expire=CACHE_TTL)
+            return docs
+        return None
 
     def list_active(self, category: str | None = None) -> list[BaseAgent]:
         """List all active public agents, optionally filtered by category."""

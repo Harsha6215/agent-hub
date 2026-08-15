@@ -6,6 +6,13 @@ import pytest
 from httpx import AsyncClient, ASGITransport
 
 from apps.api.app.main import app
+from apps.api.app.services.agent_registry import registry
+
+
+@pytest.fixture(autouse=True, scope="session")
+def register_agents():
+    """Ensure agents are registered for all tests."""
+    registry.discover_and_register()
 
 
 @pytest.fixture
