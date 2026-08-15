@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const Agents = lazy(() => import("@/pages/Agents"));
+const AgentDetail = lazy(() => import("@/pages/AgentDetail"));
 const ApiKeys = lazy(() => import("@/pages/ApiKeys"));
 const Usage = lazy(() => import("@/pages/Usage"));
 const Documentation = lazy(() => import("@/pages/Documentation"));
@@ -24,6 +25,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/agents" element={<Agents />} />
+          <Route path="/agents/:slug" element={<AgentDetail />} />
           <Route path="/api-keys" element={<ApiKeys />} />
           <Route path="/usage" element={<Usage />} />
           <Route path="/docs" element={<Documentation />} />

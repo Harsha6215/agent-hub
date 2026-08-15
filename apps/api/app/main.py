@@ -69,11 +69,20 @@ async def health_root():
 # ── 7. Startup / shutdown events ───────────────────────────────────────────────
 @app.on_event("startup")
 async def on_startup() -> None:
+    # Create tables if they don't exist (dev mode)
+    from apps.api.app.core.database import engine, Base
+    import apps.api.app.models  # noqa: F401 — ensure all models loaded
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    from apps.api.app.services.agent_registry import registry
+    registry.discover_and_register()
     logger.info(
         "app.startup",
         name=settings.APP_NAME,
         version=settings.APP_VERSION,
         env=settings.APP_ENV,
+        agents_registered=registry.count,
         docs="http://localhost:8000/docs",
     )
 
