@@ -76,7 +76,7 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     from structlog import get_logger
     logger = get_logger()
 
-    request_id = getattr(request.state, "request_id", "unknown")
+    request_id = getattr(request.state, "request_id", None) or request.scope.get("state", {}).get("request_id", "unknown")
     logger.warning("app_error", code=exc.code, message=exc.message, request_id=request_id)
 
     headers = {}
@@ -103,7 +103,7 @@ async def unhandled_error_handler(request: Request, exc: Exception) -> JSONRespo
     from structlog import get_logger
     logger = get_logger()
 
-    request_id = getattr(request.state, "request_id", "unknown")
+    request_id = getattr(request.state, "request_id", None) or request.scope.get("state", {}).get("request_id", "unknown")
     logger.error("unhandled_error", error=str(exc), request_id=request_id, exc_info=True)
 
     return JSONResponse(

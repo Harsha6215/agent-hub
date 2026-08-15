@@ -18,6 +18,7 @@ engine = create_async_engine(
     max_overflow=settings.DB_MAX_OVERFLOW,
     echo=settings.DB_ECHO,
     future=True,
+    pool_pre_ping=True,
 )
 
 # ── Session factory ────────────────────────────────────────────────────────────

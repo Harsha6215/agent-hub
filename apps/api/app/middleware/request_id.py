@@ -1,25 +1,35 @@
 """
 Middleware that assigns a unique request_id to every request.
+Pure ASGI implementation (no BaseHTTPMiddleware — avoids asyncpg conflicts).
 """
 
 import uuid
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
-
 import structlog
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 
-class RequestIDMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+class RequestIDMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
         request_id = str(uuid.uuid4())[:8]
-        request.state.request_id = request_id
+        scope.setdefault("state", {})
+        scope["state"]["request_id"] = request_id
 
-        # Bind to structlog context for this request
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
 
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        return response
+        async def send_with_request_id(message):
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"x-request-id", request_id.encode()))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_request_id)

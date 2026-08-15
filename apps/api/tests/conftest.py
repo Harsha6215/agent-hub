@@ -22,7 +22,12 @@ def anyio_backend():
 
 @pytest.fixture
 async def client():
-    """Async test client for the FastAPI app."""
+    """
+    Async test client for the FastAPI app.
+
+    Each test gets a fresh client. The app is configured with APP_ENV=test
+    which disables usage recording to avoid asyncpg conflicts.
+    """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

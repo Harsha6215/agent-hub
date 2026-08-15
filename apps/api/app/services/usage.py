@@ -7,6 +7,8 @@ from typing import Any
 
 import structlog
 
+from apps.api.app.core.config import settings
+
 logger = structlog.get_logger(__name__)
 
 
@@ -23,8 +25,8 @@ async def record_usage_event(
     """
     Record a usage event. Called after every agent execution.
 
-    This is fire-and-forget — errors are logged but do not propagate
-    and do not corrupt the parent session.
+    Uses its own session to avoid corrupting the request session.
+    Fire-and-forget — errors are logged but do not propagate.
     """
     try:
         from apps.api.app.core.database import AsyncSessionLocal
@@ -43,4 +45,5 @@ async def record_usage_event(
             await session.commit()
         logger.debug("usage.recorded", agent=agent_slug, status=status, latency_ms=latency_ms)
     except Exception as e:
-        logger.error("usage.record_failed", error=str(e), agent=agent_slug)
+        # Never let usage recording crash the request
+        logger.warning("usage.record_failed", error=str(e), agent=agent_slug)

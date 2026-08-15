@@ -1,31 +1,45 @@
 """
 Middleware that logs every request with method, path, status, and latency.
+Pure ASGI implementation (no BaseHTTPMiddleware — avoids asyncpg conflicts).
 """
 
 import time
 
 import structlog
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 logger = structlog.get_logger(__name__)
 
 
-class AccessLogMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+class AccessLogMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         start = time.perf_counter()
-        response = await call_next(request)
+        status_code = 500
+        path = scope.get("path", "")
+
+        async def send_wrapper(message):
+            nonlocal status_code
+            if message["type"] == "http.response.start":
+                status_code = message["status"]
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
         latency_ms = round((time.perf_counter() - start) * 1000, 2)
 
         # Skip health check noise
-        if request.url.path not in ("/health", "/api/v1/health"):
+        if path not in ("/health", "/api/v1/health"):
             logger.info(
                 "request",
-                method=request.method,
-                path=request.url.path,
-                status=response.status_code,
+                method=scope.get("method", ""),
+                path=path,
+                status=status_code,
                 latency_ms=latency_ms,
             )
-
-        return response

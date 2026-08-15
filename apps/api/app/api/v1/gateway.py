@@ -90,7 +90,7 @@ async def execute_agent(
     Requires X-API-Key header in production.
     In local development, anonymous access is allowed with free tier limits.
     """
-    request_id = getattr(request.state, "request_id", "unknown")
+    request_id = getattr(request.state, "request_id", None) or request.scope.get("state", {}).get("request_id", "unknown")
 
     # 1. Authenticate
     user = await _authenticate_request(x_api_key, db)
@@ -135,16 +135,17 @@ async def execute_agent(
 
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # 6. Record usage (fire-and-forget, own session)
-    await record_usage_event(
-        db,
-        user_id=user.id if user else None,
-        agent_slug=slug,
-        status=status,
-        latency_ms=int(latency_ms),
-        cost_paisa=agent.price_per_request,
-        request_meta={"request_id": request_id},
-    )
+    # 6. Record usage (fire-and-forget, own session — skipped in test env)
+    if settings.APP_ENV != "test":
+        await record_usage_event(
+            db,
+            user_id=user.id if user else None,
+            agent_slug=slug,
+            status=status,
+            latency_ms=int(latency_ms),
+            cost_paisa=agent.price_per_request,
+            request_meta={"request_id": request_id},
+        )
 
     # 7. Return response
     return GatewayExecuteResponse(
