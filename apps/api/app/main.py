@@ -59,6 +59,12 @@ app.add_exception_handler(Exception, unhandled_error_handler)
 # ── 5. Routers ─────────────────────────────────────────────────────────────────
 app.include_router(v1_router)
 
+# MCP and discovery routes at root level (not under /api/v1)
+from apps.api.app.mcp.routes import router as mcp_router
+from apps.api.app.api.v1.wellknown import router as wellknown_router
+app.include_router(mcp_router)
+app.include_router(wellknown_router)
+
 
 # ── 6. Root-level health (Docker HEALTHCHECK) ──────────────────────────────────
 @app.get("/health", tags=["System"], include_in_schema=False)
