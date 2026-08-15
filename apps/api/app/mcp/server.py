@@ -1,20 +1,20 @@
 """
 MCP Server — Exposes Agent Hub agents as MCP tools.
 
-Supports:
-  - tools/list: Returns all active agents as MCP-compatible tool definitions
-  - tools/call: Routes tool calls to the appropriate agent
+IMPORTANT: tools/call goes through the shared executor.
+This ensures auth, rate limiting, and usage recording apply equally
+to MCP and REST calls. No free backdoor.
 
-This can be served via SSE for remote access or stdio for local usage.
+Discovery (tools/list) remains public.
 """
 
 import json
-import time
 from typing import Any
 
 import structlog
 
 from apps.api.app.services.agent_registry import registry
+from apps.api.app.services.executor import execute_agent, ExecutionResult
 
 logger = structlog.get_logger(__name__)
 
@@ -22,17 +22,13 @@ logger = structlog.get_logger(__name__)
 def get_mcp_tools() -> list[dict[str, Any]]:
     """
     Generate MCP tool definitions from all registered agents.
-
-    Each agent becomes a tool with:
-    - name: agent slug
-    - description: agent description
-    - inputSchema: agent's JSON schema for input
+    This is public — no authentication required for discovery.
     """
     tools = []
     for agent in registry.list_active():
         tool = {
             "name": agent.slug,
-            "description": f"{agent.description} (v{agent.version})",
+            "description": f"{agent.description} (v{agent.version}, ₹{agent.price_per_request/100:.2f}/req)",
             "inputSchema": agent.get_input_schema(),
         }
         tools.append(tool)
@@ -41,48 +37,58 @@ def get_mcp_tools() -> list[dict[str, Any]]:
 
 async def call_mcp_tool(tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
     """
-    Execute an MCP tool call by routing to the appropriate agent.
+    Execute an MCP tool call through the shared executor.
 
-    Returns MCP-formatted response with content array.
+    Goes through: auth → rate limit → execute → usage recording.
+    Same path as REST. No bypassing.
+
+    Optional: pass `_api_key` in arguments for authenticated calls.
     """
-    agent = registry.get(tool_name)
-    if not agent:
-        return {
-            "isError": True,
-            "content": [
-                {
-                    "type": "text",
-                    "text": f"Tool '{tool_name}' not found. Available tools: {[a.slug for a in registry.list_active()]}",
-                }
-            ],
-        }
+    # Extract optional API key from arguments (MCP clients can pass it)
+    api_key = arguments.pop("_api_key", None)
 
-    start_time = time.perf_counter()
     try:
-        result = await agent.execute(arguments)
-        latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
+        result: ExecutionResult = await execute_agent(
+            slug=tool_name,
+            input_data=arguments,
+            api_key=api_key,
+        )
 
-        return {
-            "content": [
-                {
-                    "type": "text",
-                    "text": json.dumps(result, ensure_ascii=False, indent=2),
-                }
-            ],
-            "_meta": {
-                "agent": agent.slug,
-                "version": agent.version,
-                "latency_ms": latency_ms,
-            },
-        }
+        if result.success:
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": json.dumps(result.data, ensure_ascii=False, indent=2),
+                    }
+                ],
+                "_meta": {
+                    "agent": result.agent,
+                    "version": result.version,
+                    "latency_ms": result.latency_ms,
+                    "request_id": result.request_id,
+                    "cost_paisa": registry.get(tool_name).price_per_request if registry.get(tool_name) else 0,
+                },
+            }
+        else:
+            return {
+                "isError": True,
+                "content": [
+                    {
+                        "type": "text",
+                        "text": result.error or "Unknown error",
+                    }
+                ],
+            }
+
     except Exception as e:
-        logger.error("mcp.tool_call_error", tool=tool_name, error=str(e))
+        error_type = type(e).__name__
         return {
             "isError": True,
             "content": [
                 {
                     "type": "text",
-                    "text": f"Error executing '{tool_name}': {str(e)}",
+                    "text": f"{error_type}: {str(e)}",
                 }
             ],
         }

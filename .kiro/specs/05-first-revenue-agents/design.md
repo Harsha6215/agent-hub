@@ -120,7 +120,41 @@ All agents follow:
 - Input: JSON object with `operation` field (for multi-function agents) or direct fields
 - Output: JSON object with `result` field containing the calculation
 - Errors: Raise `ValueError` with clear message for invalid inputs
-- Numbers: Use float for monetary values, round to 2 decimal places
+- **Monetary values: Use `Decimal` internally, return as string (e.g., "250.00")**
+- **All pricing uses integer paisa (no floats for money)**
+- **Never use `float` for financial calculations**
+
+## Execution Context (propagated through every call)
+
+```python
+@dataclass
+class ExecutionContext:
+    request_id: str          # Unique per request, traces entire flow
+    agent_slug: str
+    agent_version: str       # Version that actually executed
+    user_id: str | None
+    api_key: str | None
+    tier: str
+```
+
+- `request_id` propagates: REST/MCP → executor → agent → usage event
+- `agent_version` recorded in usage for audit trail
+- Enables: "which version produced this result?" queries
+
+## Usage Event Schema (enhanced)
+
+```python
+UsageEvent:
+    request_id: str          # NEW: trace correlation
+    agent_slug: str
+    agent_version: str       # NEW: version that executed
+    operation: str | None    # NEW: specific operation within agent
+    user_id: UUID | None
+    status: str
+    latency_ms: int
+    cost_paisa: int          # Integer paisa, never float
+    request_meta: dict
+```
 
 ## Test Strategy
 
