@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Hub — Project Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 2rem;
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #f8fafc; }
+        .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+        .overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2.5rem;
+        }
+        .stat-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #334155;
+        }
+        .stat-card .label { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .stat-card .value { font-size: 2rem; font-weight: 700; color: #f8fafc; margin-top: 0.25rem; }
+        .stat-card .detail { color: #64748b; font-size: 0.8rem; margin-top: 0.25rem; }
+
+        .epic {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #334155;
+        }
+        .epic-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .epic-title { font-size: 1.25rem; font-weight: 600; }
+        .epic-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-done { background: #065f46; color: #6ee7b7; }
+        .badge-progress { background: #92400e; color: #fbbf24; }
+        .badge-todo { background: #1e293b; color: #64748b; border: 1px solid #475569; }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #334155;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+        .progress-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .fill-green { background: linear-gradient(90deg, #10b981, #34d399); }
+        .fill-yellow { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+
+        .task-list { list-style: none; }
+        .task-item {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.9rem;
+        }
+        .task-item:last-child { border-bottom: none; }
+        .task-check {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 2px solid #475569;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .task-check.done {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        .task-check.done::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .task-text.done { color: #64748b; text-decoration: line-through; }
+
+        .section-title {
+            font-size: 0.8rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #334155;
+        }
+
+        .github-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #60a5fa;
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin-bottom: 2rem;
+        }
+        .github-link:hover { text-decoration: underline; }
+
+        .updated { color: #475569; font-size: 0.75rem; text-align: center; margin-top: 2rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Agent Hub — Project Tracker</h1>
+        <p class="subtitle">AI Agent Utility Platform — Phase 1: Platform Foundation</p>
+        <a class="github-link" href="https://github.com/Harsha6215/agent-hub" target="_blank">
+            📂 github.com/Harsha6215/agent-hub
+        </a>
+
+        <!-- Overview Stats -->
+        <div class="overview">
+            <div class="stat-card">
+                <div class="label">Overall Progress</div>
+                <div class="value">72%</div>
+                <div class="detail">Phase 1 (Epics 1-3)</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Epics Complete</div>
+                <div class="value">2 / 3</div>
+                <div class="detail">Epic 3 in progress</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Tests Passing</div>
+                <div class="value">23</div>
+                <div class="detail">All green ✅</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Git Commits</div>
+                <div class="value">8</div>
+                <div class="detail">On master branch</div>
+            </div>
+        </div>
+
+        <!-- Epic 1 -->
+        <div class="epic">
+            <div class="epic-header">
+                <span class="epic-title">Epic 1 — Agent Hub Foundation</span>
+                <span class="epic-badge badge-done">✅ COMPLETE</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-green" style="width: 100%"></div></div>
+            <div class="section-title">Key Deliverables</div>
+            <ul class="task-list">
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Repository structure + Git + GitHub</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">FastAPI backend with config, logging, middleware, error handling</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">PostgreSQL + Redis + SQLAlchemy async + Alembic setup</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">ORM Models (User, Agent, ApiKey, UsageEvent)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">React + Vite + TypeScript + Tailwind frontend</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Docker Compose (4 services) — verified running</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">GitHub Actions CI/CD pipeline</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Health endpoints returning 200</span></li>
+            </ul>
+        </div>
+
+        <!-- Epic 2 -->
+        <div class="epic">
+            <div class="epic-header">
+                <span class="epic-title">Epic 2 — Agent Registry + API Gateway</span>
+                <span class="epic-badge badge-done">✅ COMPLETE</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-green" style="width: 100%"></div></div>
+            <div class="section-title">Key Deliverables</div>
+            <ul class="task-list">
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">BaseAgent abstract class + auto-discovery</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Agent Registry (register, get, list, unregister)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Agent CRUD endpoints (POST/GET/PUT/DELETE)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">API Gateway execute endpoint with validation</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Hello World agent (multi-language greeting)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Usage event recording (fire-and-forget)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Auto-generated agent documentation endpoint</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Frontend: Agent catalog + detail page</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Redis caching for agent docs</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">23 tests passing (registry, gateway, health, config)</span></li>
+            </ul>
+        </div>
+
+        <!-- Epic 3 -->
+        <div class="epic">
+            <div class="epic-header">
+                <span class="epic-title">Epic 3 — Authentication + Usage Metering</span>
+                <span class="epic-badge badge-progress">🔄 IN PROGRESS (70%)</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill fill-yellow" style="width: 70%"></div></div>
+            <div class="section-title">Completed</div>
+            <ul class="task-list">
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Security utilities (bcrypt, JWT, API key gen/hash)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Auth schemas (RegisterRequest, LoginRequest, TokenResponse, UserResponse)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Auth service (register, login, refresh tokens)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Auth endpoints (register/login/refresh/me) — tested ✅</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Auth dependencies (get_current_user, get_current_admin, validate_api_key)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">API Key management (create, list, revoke)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Rate limiter (Redis sliding window, per-tier limits)</span></li>
+                <li class="task-item"><span class="task-check done"></span><span class="task-text done">Gateway integrated with auth + rate limiting</span></li>
+            </ul>
+            <div class="section-title">Remaining</div>
+            <ul class="task-list">
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Usage aggregation endpoints (daily, by-agent)</span></li>
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Admin analytics endpoints</span></li>
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Frontend: Login & Register pages</span></li>
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Frontend: API Keys page (full implementation)</span></li>
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Frontend: Usage dashboard with charts</span></li>
+                <li class="task-item"><span class="task-check"></span><span class="task-text">Auth tests</span></li>
+            </ul>
+        </div>
+
+        <!-- Upcoming -->
+        <div class="epic" style="opacity: 0.6;">
+            <div class="epic-header">
+                <span class="epic-title">Phase 2 — Monetization (Epics 4-6)</span>
+                <span class="epic-badge badge-todo">UPCOMING</span>
+            </div>
+            <ul class="task-list" style="color: #64748b; font-size: 0.85rem; padding-left: 1rem; list-style: disc;">
+                <li>Epic 4 — MCP + Developer Portal</li>
+                <li>Epic 5 — First Revenue Agents (GST, Salary, EMI, SIP calculators)</li>
+                <li>Epic 6 — Billing & Payments (Razorpay/Stripe)</li>
+            </ul>
+        </div>
+
+        <p class="updated">Last updated: August 15, 2026 • Auto-generated from .kiro/specs/ task files</p>
+    </div>
+</body>
+</html>
