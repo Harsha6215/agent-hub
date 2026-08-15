@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, master, develop]
   pull_request:
-    branches: [main]
+    branches: [main, master]
 
 jobs:
   backend:
@@ -43,13 +43,25 @@ jobs:
           cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r apps/api/requirements.txt
+        run: |
+          pip install -r apps/api/requirements.txt
+          pip install bandit pip-audit ruff
+
+      - name: Security scan (bandit)
+        run: bandit -r apps/api/app/ -ll --skip B101
+
+      - name: Dependency audit (pip-audit)
+        run: pip-audit --strict --desc || true
+
+      - name: Lint (ruff)
+        run: ruff check apps/api/ agents/ --select E,F,W --ignore E501
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/agent_hub_test
           REDIS_URL: redis://localhost:6379/0
           APP_ENV: test
+          PYTHONPATH: .
         run: pytest apps/api/tests/ -v
 
   frontend:
@@ -75,3 +87,7 @@ jobs:
       - name: Build
         working-directory: apps/web
         run: npm run build
+
+      - name: Audit dependencies
+        working-directory: apps/web
+        run: npm audit --audit-level=high || true

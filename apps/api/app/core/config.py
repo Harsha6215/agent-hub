@@ -5,7 +5,11 @@ All settings have safe defaults for local development.
 
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_INSECURE_DEFAULT = "change-me-to-a-long-random-string-in-production"
 
 
 class Settings(BaseSettings):
@@ -27,8 +31,10 @@ class Settings(BaseSettings):
     BACKEND_PORT: int = 8000
 
     # ── Security ───────────────────────────────────────────────────────────────
-    SECRET_KEY: str = "change-me-to-a-long-random-string-in-production"
+    SECRET_KEY: str = _INSECURE_DEFAULT
     JWT_ALGORITHM: str = "HS256"
+    JWT_ISSUER: str = "agent-hub"
+    JWT_AUDIENCE: str = "agent-hub-api"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
@@ -54,6 +60,23 @@ class Settings(BaseSettings):
     # ── Logging ────────────────────────────────────────────────────────────────
     LOG_LEVEL: str = "INFO"
     LOG_JSON: bool = False
+
+    # ── Validation ─────────────────────────────────────────────────────────────
+
+    @model_validator(mode="after")
+    def _validate_production_settings(self):
+        """Fail fast if SECRET_KEY is insecure in non-local environments."""
+        if self.APP_ENV not in ("local", "test"):
+            if self.SECRET_KEY == _INSECURE_DEFAULT:
+                raise ValueError(
+                    "SECRET_KEY must be set to a strong random value in "
+                    f"APP_ENV={self.APP_ENV}. Do not use the default."
+                )
+            if len(self.SECRET_KEY) < 32:
+                raise ValueError(
+                    "SECRET_KEY must be at least 32 characters in production."
+                )
+        return self
 
 
 @lru_cache

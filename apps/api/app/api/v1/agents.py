@@ -28,20 +28,25 @@ router = APIRouter(prefix="/agents", tags=["Agents"])
 async def list_agents(
     category: str | None = Query(None, description="Filter by category"),
     is_public: bool = Query(True, description="Only show public agents"),
+    limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    offset: int = Query(0, ge=0, description="Pagination offset"),
     db: AsyncSession = Depends(get_db),
 ):
-    """List all active agents in the catalog."""
+    """List all active agents in the catalog (paginated)."""
     query = select(Agent).where(Agent.is_active == True)
     if is_public:
         query = query.where(Agent.is_public == True)
     if category:
         query = query.where(Agent.category == category)
 
-    result = await db.execute(query)
-    agents = result.scalars().all()
-
+    # Count total
     count_query = select(func.count()).select_from(query.subquery())
     total = (await db.execute(count_query)).scalar() or 0
+
+    # Apply pagination
+    query = query.order_by(Agent.created_at.desc()).offset(offset).limit(limit)
+    result = await db.execute(query)
+    agents = result.scalars().all()
 
     return AgentListResponse(
         agents=[AgentResponse.model_validate(a) for a in agents],

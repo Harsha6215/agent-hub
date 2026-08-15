@@ -1,8 +1,9 @@
 """
-Auth endpoints — registration, login, token refresh, current user.
+Auth endpoints — registration, login, token refresh, logout, current user.
 """
 
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.app.core.config import settings
@@ -15,9 +16,17 @@ from apps.api.app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
-from apps.api.app.services.auth import login_user, refresh_tokens, register_user
+from apps.api.app.services.auth import login_user, logout_user, refresh_tokens, register_user
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str
 
 
 @router.post("/register", response_model=TokenResponse, status_code=201)
@@ -47,14 +56,20 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(refresh_token: str):
-    """Get new token pair using a refresh token."""
-    new_access, new_refresh = await refresh_tokens(refresh_token)
+async def refresh(body: RefreshRequest):
+    """Get new token pair using a refresh token. Old refresh token is revoked."""
+    new_access, new_refresh = await refresh_tokens(body.refresh_token)
     return TokenResponse(
         access_token=new_access,
         refresh_token=new_refresh,
         expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+
+
+@router.post("/logout", status_code=204)
+async def logout(body: LogoutRequest):
+    """Revoke a refresh token. Call on user logout."""
+    await logout_user(body.refresh_token)
 
 
 @router.get("/me", response_model=UserResponse)

@@ -9,18 +9,24 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Create non-root user
+RUN useradd -m -r appuser && chown appuser:appuser /app
+
 # Install Python dependencies
 COPY apps/api/requirements.txt ./apps/api/requirements.txt
 RUN pip install --no-cache-dir -r apps/api/requirements.txt
 
 # Copy source
-COPY apps/api/ ./apps/api/
-COPY agents/ ./agents/
-COPY packages/ ./packages/
+COPY --chown=appuser:appuser apps/api/ ./apps/api/
+COPY --chown=appuser:appuser agents/ ./agents/
+COPY --chown=appuser:appuser packages/ ./packages/
 
 # Copy entrypoint
-COPY docker/backend-entrypoint.sh /entrypoint.sh
+COPY --chown=appuser:appuser docker/backend-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+# Switch to non-root user
+USER appuser
 
 EXPOSE 8000
 

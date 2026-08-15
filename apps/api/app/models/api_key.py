@@ -19,7 +19,7 @@ class ApiKey(BaseModel):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    key_prefix: Mapped[str] = mapped_column(String(10), nullable=False)  # first 8 chars for display
+    key_prefix: Mapped[str] = mapped_column(String(16), nullable=False)  # e.g., "sk_live_abc1"
     key_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)  # SHA-256
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

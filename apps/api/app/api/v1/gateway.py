@@ -2,17 +2,27 @@
 API Gateway — Agent execution endpoint.
 
 Flow: authenticate → rate limit → validate → lookup → execute → record → respond
+
+Authentication:
+  - Production (APP_ENV != local): API key REQUIRED (401 if missing)
+  - Local development: API key optional (anonymous gets free tier)
 """
 
 import time
 
 import structlog
 from fastapi import APIRouter, Depends, Header, Request
-from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.app.core.config import settings
 from apps.api.app.core.database import get_db
-from apps.api.app.core.exceptions import NotFoundError, RateLimitError, ValidationError
+from apps.api.app.core.exceptions import (
+    AuthenticationError,
+    NotFoundError,
+    RateLimitError,
+    ValidationError,
+)
 from apps.api.app.core.security import hash_api_key
 from apps.api.app.models.api_key import ApiKey
 from apps.api.app.models.user import User
@@ -25,31 +35,40 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(tags=["Gateway"])
 
 
-async def _get_user_from_api_key(
+async def _authenticate_request(
     x_api_key: str | None, db: AsyncSession
 ) -> User | None:
-    """Try to authenticate via API key. Returns None if no key provided."""
-    if not x_api_key:
-        return None
+    """
+    Authenticate via API key.
 
-    from sqlalchemy import select
+    In production (APP_ENV != local): raises AuthenticationError if no key provided.
+    In local development: returns None for anonymous access.
+    """
+    if not x_api_key:
+        if settings.APP_ENV not in ("local", "test"):
+            raise AuthenticationError(
+                "API key required. Provide X-API-Key header."
+            )
+        return None
 
     key_hash = hash_api_key(x_api_key)
     result = await db.execute(
         select(ApiKey).where(ApiKey.key_hash == key_hash, ApiKey.is_active == True)
     )
     api_key = result.scalar_one_or_none()
+
     if not api_key:
-        return None
+        raise AuthenticationError("Invalid API key")
 
     result = await db.execute(select(User).where(User.id == api_key.user_id))
     user = result.scalar_one_or_none()
 
-    # Update last_used_at
-    if api_key:
-        from datetime import datetime, timezone
+    if not user or not user.is_active:
+        raise AuthenticationError("API key owner not found or inactive")
 
-        api_key.last_used_at = datetime.now(timezone.utc)
+    # Update last_used_at
+    from datetime import datetime, timezone
+    api_key.last_used_at = datetime.now(timezone.utc)
 
     return user
 
@@ -68,17 +87,17 @@ async def execute_agent(
     """
     Execute an agent through the gateway.
 
-    Authentication via X-API-Key header is optional for now.
-    When provided, usage is tracked per user and rate limits apply.
+    Requires X-API-Key header in production.
+    In local development, anonymous access is allowed with free tier limits.
     """
     request_id = getattr(request.state, "request_id", "unknown")
 
-    # 1. Authenticate (optional for now — will be required in production)
-    user = await _get_user_from_api_key(x_api_key, db)
+    # 1. Authenticate
+    user = await _authenticate_request(x_api_key, db)
     user_id = str(user.id) if user else "anonymous"
     tier = user.tier if user else "free"
 
-    # 2. Rate limit check
+    # 2. Rate limit check (atomic)
     allowed, remaining, reset = await check_rate_limit(user_id, tier)
     if not allowed:
         raise RateLimitError(retry_after=reset)
@@ -88,7 +107,7 @@ async def execute_agent(
     if not agent:
         raise NotFoundError(f"Agent '{slug}' not found or inactive")
 
-    # 4. Validate input (basic schema check)
+    # 4. Validate input
     input_schema = agent.get_input_schema()
     required_fields = input_schema.get("required", [])
     for field in required_fields:
@@ -116,7 +135,7 @@ async def execute_agent(
 
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # 6. Record usage (fire-and-forget)
+    # 6. Record usage (fire-and-forget, own session)
     await record_usage_event(
         db,
         user_id=user.id if user else None,
@@ -127,8 +146,8 @@ async def execute_agent(
         request_meta={"request_id": request_id},
     )
 
-    # 7. Return response with rate limit headers
-    response = GatewayExecuteResponse(
+    # 7. Return response
+    return GatewayExecuteResponse(
         success=(status == "success"),
         data=result,
         error=error_msg,
@@ -137,5 +156,3 @@ async def execute_agent(
         latency_ms=latency_ms,
         request_id=request_id,
     )
-
-    return response

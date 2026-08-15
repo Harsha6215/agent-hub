@@ -3,7 +3,9 @@ Security utilities — password hashing, JWT tokens, and API key management.
 """
 
 import hashlib
+import hmac
 import secrets
+import uuid
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
@@ -30,7 +32,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(subject: str, extra_claims: dict | None = None) -> str:
-    """Create a short-lived access token."""
+    """Create a short-lived access token with issuer and audience."""
     expires = datetime.now(timezone.utc) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
@@ -39,6 +41,8 @@ def create_access_token(subject: str, extra_claims: dict | None = None) -> str:
         "exp": expires,
         "iat": datetime.now(timezone.utc),
         "type": "access",
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
     }
     if extra_claims:
         payload.update(extra_claims)
@@ -46,15 +50,19 @@ def create_access_token(subject: str, extra_claims: dict | None = None) -> str:
 
 
 def create_refresh_token(subject: str) -> str:
-    """Create a long-lived refresh token."""
+    """Create a long-lived refresh token with JTI for revocation tracking."""
     expires = datetime.now(timezone.utc) + timedelta(
         days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
+    jti = str(uuid.uuid4())
     payload = {
         "sub": subject,
         "exp": expires,
         "iat": datetime.now(timezone.utc),
         "type": "refresh",
+        "jti": jti,
+        "iss": settings.JWT_ISSUER,
+        "aud": settings.JWT_AUDIENCE,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
 
@@ -63,11 +71,16 @@ def decode_token(token: str) -> dict:
     """
     Decode and verify a JWT token.
 
+    Validates signature, expiry, issuer, and audience.
     Raises JWTError if the token is invalid or expired.
     """
     try:
         payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.JWT_ALGORITHM]
+            token,
+            settings.SECRET_KEY,
+            algorithms=[settings.JWT_ALGORITHM],
+            issuer=settings.JWT_ISSUER,
+            audience=settings.JWT_AUDIENCE,
         )
         return payload
     except JWTError:
@@ -89,5 +102,12 @@ def generate_api_key(environment: str = "live") -> str:
 
 
 def hash_api_key(key: str) -> str:
-    """Hash an API key using SHA-256 for storage."""
-    return hashlib.sha256(key.encode()).hexdigest()
+    """
+    Hash an API key using HMAC-SHA256 with SECRET_KEY.
+
+    This prevents rainbow table attacks if the database is compromised,
+    since the attacker also needs the server's SECRET_KEY.
+    """
+    return hmac.HMAC(
+        settings.SECRET_KEY.encode(), key.encode(), hashlib.sha256
+    ).hexdigest()
