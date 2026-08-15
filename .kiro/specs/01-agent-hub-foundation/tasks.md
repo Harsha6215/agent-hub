@@ -90,8 +90,8 @@
 - [x] Create `docs/ROADMAP.md` — full epic roadmap (Epics 1–12)
 
 ## Definition of Done
-- [ ] All services start with `docker compose up`
-- [ ] Health endpoint returns 200
-- [ ] Frontend loads in browser
+- [x] All services start with `docker compose up`
+- [x] Health endpoint returns 200
+- [x] Frontend loads in browser
 - [ ] Backend tests pass
-- [ ] README is complete and accurate
+- [x] README is complete and accurate
