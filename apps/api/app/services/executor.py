@@ -114,21 +114,20 @@ async def execute_agent(
 
     latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-    # 6. Record usage (with version + request_id)
-    if settings.APP_ENV != "test":
-        await record_usage_event(
-            db=None,
-            user_id=user_id,
-            agent_slug=slug,
-            status=status,
-            latency_ms=int(latency_ms),
-            cost_paisa=agent.price_per_request,
-            request_meta={
-                "request_id": request_id,
-                "agent_version": agent.version,
-                "operation": operation,
-            },
-        )
+    # 6. Record usage (always — this is the commercial pipeline)
+    await record_usage_event(
+        db=None,
+        user_id=user_id,
+        agent_slug=slug,
+        status=status,
+        latency_ms=int(latency_ms),
+        cost_paisa=agent.price_per_request,
+        request_meta={
+            "request_id": request_id,
+            "agent_version": agent.version,
+            "operation": operation,
+        },
+    )
 
     # 7. Return result
     return ExecutionResult(
