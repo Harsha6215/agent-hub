@@ -56,7 +56,7 @@ async def quickstart():
                 "config": {
                     "mcpServers": {
                         "agent-hub": {
-                            "url": "http://localhost:8000/mcp",
+                            "url": "https://agent-hub-production-70f1.up.railway.app/mcp",
                             "transport": "http",
                         }
                     }
@@ -89,7 +89,7 @@ async def agent_examples(slug: str):
     if not agent:
         return {"error": f"Agent '{slug}' not found"}
 
-    base_url = "http://localhost:8000"
+    base_url = "https://agent-hub-production-70f1.up.railway.app"
     return {
         "agent": slug,
         "examples": {

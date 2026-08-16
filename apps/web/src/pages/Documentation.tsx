@@ -128,7 +128,7 @@ export default function Documentation() {
 {`{
   "mcpServers": {
     "agent-hub": {
-      "url": "http://localhost:8000/mcp",
+      "url": "https://agent-hub-production-70f1.up.railway.app/mcp",
       "transport": "http"
     }
   }

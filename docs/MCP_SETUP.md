@@ -6,7 +6,7 @@ so AI assistants can discover and call agents as tools.
 ## Endpoint
 
 ```
-POST http://localhost:8000/mcp
+POST https://agent-hub-production-70f1.up.railway.app/mcp
 ```
 
 ## Supported Methods
@@ -96,7 +96,7 @@ Add to your `.kiro/settings/mcp.json` or workspace config:
 {
   "mcpServers": {
     "agent-hub": {
-      "url": "http://localhost:8000/mcp",
+      "url": "https://agent-hub-production-70f1.up.railway.app/mcp",
       "transport": "http"
     }
   }
@@ -112,7 +112,7 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "agent-hub": {
       "command": "curl",
-      "args": ["-X", "POST", "http://localhost:8000/mcp"]
+      "args": ["-X", "POST", "https://agent-hub-production-70f1.up.railway.app/mcp"]
     }
   }
 }
@@ -122,7 +122,7 @@ Add to `claude_desktop_config.json`:
 
 List all tools without JSON-RPC:
 ```
-GET http://localhost:8000/mcp/tools
+GET https://agent-hub-production-70f1.up.railway.app/mcp/tools
 ```
 
 ## Discovery

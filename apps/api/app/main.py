@@ -89,7 +89,7 @@ async def on_startup() -> None:
         version=settings.APP_VERSION,
         env=settings.APP_ENV,
         agents_registered=registry.count,
-        docs="http://localhost:8000/docs",
+        docs="https://agent-hub-production-70f1.up.railway.app/docs",
     )
 
 
