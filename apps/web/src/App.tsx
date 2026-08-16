@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
+const Landing = lazy(() => import("@/pages/Landing"));
 const Login = lazy(() => import("@/pages/Login"));
 const Register = lazy(() => import("@/pages/Register"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -25,16 +26,17 @@ export default function App() {
   return (
     <Suspense fallback={<PageSpinner />}>
       <Routes>
-        {/* Public routes */}
+        {/* Public routes (no login required) */}
+        <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/agents" element={<Agents />} />
+        <Route path="/agents/:slug" element={<AgentDetail />} />
 
-        {/* Protected routes */}
+        {/* Protected routes (login required) */}
         <Route element={<ProtectedRoute />}>
           <Route element={<AppShell />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/agents" element={<Agents />} />
-            <Route path="/agents/:slug" element={<AgentDetail />} />
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/usage" element={<Usage />} />
             <Route path="/docs" element={<Documentation />} />
@@ -42,8 +44,7 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
   );

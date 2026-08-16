@@ -74,3 +74,54 @@ async def analytics_agents(
             for row in rows
         ]
     }
+
+
+@router.get("/beta-metrics")
+async def beta_metrics(
+    admin: User = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Beta program metrics for product decisions."""
+    from datetime import timedelta
+
+    now = datetime.now(timezone.utc)
+    day_ago = now - timedelta(days=1)
+    week_ago = now - timedelta(days=7)
+
+    registered_users = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
+
+    from apps.api.app.models.api_key import ApiKey
+    api_keys_created = (await db.execute(select(func.count()).select_from(ApiKey))).scalar() or 0
+
+    total_calls = (await db.execute(select(func.count()).select_from(UsageEvent))).scalar() or 0
+    calls_24h = (await db.execute(
+        select(func.count()).where(UsageEvent.created_at >= day_ago)
+    )).scalar() or 0
+    calls_7d = (await db.execute(
+        select(func.count()).where(UsageEvent.created_at >= week_ago)
+    )).scalar() or 0
+
+    # Unique users with calls
+    unique_users = (await db.execute(
+        select(func.count(func.distinct(UsageEvent.user_id))).where(UsageEvent.user_id.isnot(None))
+    )).scalar() or 0
+
+    # Most used agent
+    most_used_q = await db.execute(
+        select(UsageEvent.agent_slug, func.count().label("cnt"))
+        .group_by(UsageEvent.agent_slug)
+        .order_by(func.count().desc())
+        .limit(1)
+    )
+    most_used_row = most_used_q.first()
+    most_used_agent = most_used_row.agent_slug if most_used_row else None
+
+    return {
+        "registered_users": registered_users,
+        "api_keys_created": api_keys_created,
+        "total_calls": total_calls,
+        "calls_last_24h": calls_24h,
+        "calls_last_7d": calls_7d,
+        "unique_api_users": unique_users,
+        "most_used_agent": most_used_agent,
+    }

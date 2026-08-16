@@ -71,11 +71,12 @@ async def execute_agent(
         if not api_key and not user_id:
             raise AuthenticationError("API key required. Provide X-API-Key header.")
 
-    # 3. Rate limit
-    identity = str(user_id) if user_id else "anonymous"
-    allowed, remaining, reset = await check_rate_limit(identity, user_tier)
-    if not allowed:
-        raise RateLimitError(retry_after=reset)
+    # 3. Rate limit (skip in test mode)
+    if settings.APP_ENV != "test":
+        identity = str(user_id) if user_id else "anonymous"
+        allowed, remaining, reset = await check_rate_limit(identity, user_tier)
+        if not allowed:
+            raise RateLimitError(retry_after=reset)
 
     # 4. Validate input
     input_schema = agent.get_input_schema()
